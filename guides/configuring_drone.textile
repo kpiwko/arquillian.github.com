@@ -1,0 +1,175 @@
+---
+layout: guide
+title: Configuring Arquillian Drone
+authors: [Karel Piwko]
+tags: [drone, selenium, webdriver, ajocado, as7 ]
+guide_summary: Discover how to configure Arquillian Drone
+guide_group: 2
+---
+
+<!--
+Maven resolver (either in tutorial, or as supplement)
+-->
+
+<div class="header">
+h2. #{page.title}
+
+div(authors). *Authors:* #{page.authors.join(', ')}
+
+This guide introduces you advanced means of configuring the Drone extension for Arquillian. After reading this guide, you'll be able to:
+
+* Select various browsers for your Arquillian Drone based tests
+* Specify browser life cycle in your tests
+* Configure complicated test cases
+
+</div>
+
+h3. Assumptions
+
+We'll assume that you've read the "Functional Testing Using Arquillian Drone":/guides/functional_testing_using_drone guide and have an Selenium test case. We'll be adding @arquillian.xml@ file and modify Surefire configuration to the project. We also change the Maven project, so you will be able to use different browsers than Selenium and modify the user interface of the login page so you we can test some of the AJAX features.
+
+The instructions in this guide are specific to a Maven project, though remember that Arquillian is not tied to Maven in any way. We'll be running the tests on a JBoss AS 7 instance, though you can use any container supported by Arquillian that has a web container.
+
+In this guide, we'll be using the following technologies:
+
+* Arquillian
+* Arquillian Drone
+* Arquillian Ajocado
+* ShrinkWrap Maven Resolver
+* "Selenium":http://tdb
+* "WebDriver":http://tdb
+* "Selenium Server":http://seleniumhq.org/projects/remote-control (formerly Selenium Remote Control)
+
+Arquillian Drone currently support Selenium, WebDriver and Arquillian Ajocado functional test frameworks. Despite all these frameworks have the same purpose, their use cases will likely differ because of their strong and weak points. We'll discuss them further in the guide.
+
+h3. Configuring Drone
+
+Drone share the means of configuration with Arquillian, so you can configure it via @arquillian.xml@ descriptor. Let's analyze following file:
+
+div(filename). src/test/resources/arquillian.xml
+
+bc(prettify).. <arquillian xmlns="http://jboss.org/schema/arquillian"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://jboss.org/schema/arquillian
+        http://jboss.org/schema/arquillian/arquillian_1_0.xsd">
+    <extension qualifier="selenium">
+        <property name="browser">*googlechrome</property>
+    </extension>
+</arquillian> 
+
+p. Here we are passing a property @browser@ to an extension called @selenium@. Drone is using qualifier to distinguish among supported frameworks. Here we now that @<extension qualifier="selenium">@ will be picked up by Selenium testing framework. 
+
+However, that's not the only way how Drone can be configured. Drone allows you to specify every property by using a system property as well. This property always have a precedence, so you can override @arquillian.xml@ value easily. Surefire plugin does not preserve the environment, so you have to use following workaround:
+
+div(filename). pom.xml
+
+bc(prettify).. <!-- clip -->
+<properties>
+    <arquillian.selenium.browser>*firefox</arquillian.selenium.browser>
+</properties>
+<!-- clip -->
+
+<!-- clip -->
+<plugin>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <configuration>
+        <arquillian.selenium.browser>${arquillian.selenium.browser}</arquillian.selenium.browser>
+    </configuration>
+</plugin>
+<!-- clip -->
+
+p. The former clip defines a @property@ value in Maven pom.xml file. The default value is @*firefox@, so your test is running against Firefox browser if you don't specify property value. The latter clip propagates value of the property to environment created by Surefire for your test case. Now you can change it on the command line to use Google Chrome:
+
+bc(command). $ mvn test -Darquillian.selenium.browser=*googlechrome
+
+p. *Congratulations!* You've just tested that your application login page works correctly in Google Chrome! *(greenbar)Green bar*!
+
+Name of the system property corresponds to @arquillian.@ + qualifier of the extension (e.g. @selenium@) + @.@ and the name of the property. If property name contains any upper case characters, they are replaced by a lower case character and a dot is prepended before the character itself.
+
+p(info). %If you don't like like the name of the property, you can use system property replacement in @arquillian.xml@ file which allows you to specify arbitrary name. This does not influence the Drone system property replacement, it is only a different way of getting things done.%
+
+Let's move to the frameworks themselves.
+
+h3. Selenium
+
+div(filename). pom.xml
+
+bc(prettify).. <!-- clip -->
+<dependency>
+    <groupId>org.jboss.arquillian.extension</groupId>
+    <artifactId>arquillian-drone-impl</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.jboss.arquillian.extension</groupId>
+    <artifactId>arquillian-drone-selenium</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-java</artifactId>
+    <scope>test</scope>
+</dependency>
+<!-- clip -->
+
+h3. Selenium Server
+
+Selenium or @DefaultSelenium@ uses JavaScript to control the web browser. This means there has to be a server which accepts commands sent from the test case. This server is called Selenium Server. The server must be running prior the first command is sent from the test case. This can be handled by Drone. Simply include following snippet into @<dependencies>@ section:
+
+div(filename). pom.xml
+
+bc(prettify).. <!-- clip -->
+<dependency>
+    <groupId>org.jboss.arquillian.extension</groupId>
+    <artifactId>arquillian-drone-selenium-server</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-server</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <scope>test</scope>
+</dependency> 
+<!-- clip -->
+
+p(warning). %Selenium Server uses Jetty Server. This might introduce class path issues when you want to use it together with Arquillian Jetty container, especially with the embedded one. We can recommend you either to replace Jetty embedded container by a different container or to use a different tool to start the Selenium Server if a problem occurs.%  
+
+You can further configure Selenium Server in the @arquillian.xml@ file.
+
+h3. WebDriver
+
+h3. Arquillian Ajocado
+
+We often call it _Selenium on steroids_. The reason is that Ajocado *FIXME add pronounciation* wraps Selenium and allows user to use it in a type-safe way. It also makes testing of AJAX features much more easier.
+
+Including Ajocado into your test is pretty simple. We have already prepared a single dependency for both JUnit and TestNG. Modify @<dependencies>@ section in Maven pom.xml file to include the following:
+
+div(filename). pom.xml
+
+bc(prettify).. <!-- clip -->
+<dependency>
+    <groupId>org.jboss.arquillian.ajocado</groupId>
+    <artifactId>arquillian-ajocado-junit</artifactId>
+    <scope>test</scope>
+    <type>pom</type>
+    <version>1.0.0.CR2</version>
+</dependency>
+<!-- clip -->
+
+p(info). %This is _the only_ @dependency@ you need. It already incorporates Selenium, Selenium Server, SLF4J, Arquillian Drone and even Arquillian JUnit Container support.%
+
+h3. Qualified browsers
+
+h3. Executing the testsuite against multiple browsers
+
+Surefire hack for 2.10 and the prefix of classes
+
+
+_Arquillian makes integration testing a breeze. Arquillian Drone adds a great support for functional tests. Together, they make developing tests fun again._
+
+h3. Share the Knowledge 
