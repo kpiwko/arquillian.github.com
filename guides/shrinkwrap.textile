@@ -68,16 +68,21 @@ bc(prettify).. <project xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="
   http://maven.apache.org/POM/4.0.0
   http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <!-- snip -->
-  
-  <dependency>
-    <groupId>org.jboss.shrinkwrap</groupId>
-    <artifactId>shrinkwrap-depchain</artifactId>
-    <version>${version.shrinkwrap}</version>
-    <type>pom</type>
-  </dependency>
 
-  <!-- snip -->
+  <dependencies>
+
+    <!-- snip -->
+  
+    <dependency>
+      <groupId>org.jboss.shrinkwrap</groupId>
+      <artifactId>shrinkwrap-depchain</artifactId>
+      <version>${version.shrinkwrap}</version>
+      <type>pom</type>
+    </dependency>
+
+    <!-- snip -->
+
+  </dependencies>
 </project>
 
 p. For projects outside use of the Maven repository system, the ShrinkWrap Distribution makes all modules available as a download, and you may set up the dependencies manually to suit your needs.
@@ -116,7 +121,7 @@ Additionally, @Archive@ s have many views, and you won't typically be dealing wi
 |@org.jboss.shrinkwrap.api.spec.WebArchive@|Java EE WAR type; supports operations common to web application deployments|
 |@org.jboss.shrinkwrap.api.spec.ResourceAdaptorArchive@|Java EE RAR type; supports operations common to resource adaptor deployments|
 
-To create an @Archive@, simply choose your desired archive type and optionally supply a name to the static @ShrinkWrap:create@ method:
+To create an @Archive@, simply choose your desired archive type and optionally supply a name to the static @ShrinkWrap.create@ method:
 
 bc(prettify).. GenericArchive myArchive = ShrinkWrap.create(GenericArchive.class,"myArchive.jar");
 
